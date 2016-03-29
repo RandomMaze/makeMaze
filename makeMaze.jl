@@ -105,9 +105,12 @@ end
 function makePathSuccess(ma::maze)
   pa = ma.st
   pb = ma.ed
+  ma.arr[pa...] = 1
+  ma.arr[pb...] = 2
+
   while allCanMove(ma, pa, pb)
-    nextp(ma, pa, 1)
-    nextp(ma, pb, 2) # 各自颜色为1,2
+    nextp(ma, pa)
+    nextp(ma, pb) # 各自颜色为1,2
 
     # 染色
     ma.arr[pa...] = 1
@@ -123,20 +126,22 @@ end
 function makePath(ma::maze, maxstep)
   for i = 1:maxstep
     if makePathSuccess(ma)
-      return ma
+      return 0
     else
       fill!(ma.arr, int8(0)) # 清除数据
     end
   end
 
-  return ma
+  return -1
 end
 
 function makeMaze(m, n, st, ed)
   temp = maze(fill(int8(0), m, n), m, n, st, ed) # 构建初始迷宫
 
   #随机行走
-  makePath(temp, 1000)
+  if makePath(temp, 1000) == -1
+    throw("Error")
+  end
 
   return temp
 end
