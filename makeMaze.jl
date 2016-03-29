@@ -1,52 +1,113 @@
 include("Types.jl")
 
-#判断是否可以行走
-function allCanMove(ma::maze, pa, pb)
-  might_move_a = fill(pa, 2)
-  might_move_b = fill(pb, 2)
+##=============判断是否可以行走=======================
 
-  can_move_a = fill(true, 2, 2)
-  can_move_b = fill(true, 2, 2)
+# 判断是否可以向左走
+function can_l(ma::maze, p)
+  colo = ma.arr[p...]
 
-  might_move_a[1, 1] += 1
-  might_move_a[2, 1] += -1
-  might_move_a[1, 2] += 1
-  might_move_a[2, 2] += -1
-
-  might_move_b[1, 1] += 1
-  might_move_b[2, 1] += -1
-  might_move_b[1, 2] += 1
-  might_move_b[2, 2] += -1
-
-  # 判断是否到边界
-  for i = 1:2, j = 1:2
-    if might_move_a[i,j] < 0
-      can_move_a[i, j] = false
-    end
-
-    if might_move_b[i,j] < 0
-      can_move_b[i, j] = false
-    end
-
-    if i == 1
-      if j == 1
-        if might_move_a[i,j] > m
-          can_move_a[i, j] = false
-        end
-      elseif might_move_b
-
+  # 判断撞墙
+  if p[1] - 1 < 1
+    return false
   end
 
-  # 偶数坐标代表向增大方向走
+  # 判断撞到自己
+  if ma.arr[(p + [-1, 0])...] == colo
+    return false
+  end
+
+  return true
 end
 
+function can_r(ma::maze, p)
+  colo = ma.arr[p...]
 
+  # 判断撞墙
+  if p[1] + 1 > ma.m
+    return false
+  end
+
+  # 判断撞到自己
+  if ma.arr[(p + [1, 0])...] == colo
+    return false
+  end
+
+  return true
+end
+
+function can_u(ma::maze, p)
+  colo = ma.arr[p...]
+
+  # 判断撞墙
+  if p[2] - 1 < 1
+    return false
+  end
+
+  # 判断撞到自己
+  if ma.arr[(p + [0, -1])...] == colo
+    return false
+  end
+
+  return true
+end
+
+function can_d(ma::maze, p)
+  colo = ma.arr[p...]
+
+  # 判断撞墙
+  if p[2] + 1 > ma.n
+    return false
+  end
+
+  # 判断撞到自己
+  if ma.arr[(p + [0, 1])...] == colo
+    return false
+  end
+
+  return true
+end
+#判断是否可以行走
+function allCanMove(ma::maze, pa, pb)
+  return (can_l(ma, pa) || can_r(ma, pa) || can_u(ma, pa) || can_d(ma, pa)) && (can_l(ma, pa) || can_r(ma, pa) || can_u(ma, pa) || can_d(ma, pa))
+end
+
+##============尝试行走=========================
+
+function nextp(ma::maze, p)
+  t = false
+  while !t
+    k = rand([1, 2, 3, 4])
+    if k == 1 && can_l(ma, p)#can_l
+      t = true
+      p += [-1, 0]
+      return 0
+    end
+    if k == 2 && can_r(ma, p)
+      t = true
+      p += [1, 0]
+      return 0
+    end
+    if k == 3 && can_u(ma, p)
+      t = true
+      p += [0, -1]
+      return 0
+    end
+    if k == 4 && can_d(ma, p)
+      t = true
+      p += [0, 1]
+      return 0
+    end
+  end
+  return -1
+end
+
+# 尝试构建一次主干，成功则返回true,否则返回false
 function makePathSuccess(ma::maze)
   pa = ma.st
   pb = ma.ed
   while allCanMove(ma, pa, pb)
-    nextp(pa, 1)
-    nextp(pb, 2) # 各自颜色为1,2
+    nextp(ma, pa, 1)
+    nextp(ma, pb, 2) # 各自颜色为1,2
 
     # 染色
     ma.arr[pa...] = 1
