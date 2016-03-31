@@ -78,7 +78,12 @@ function nextp(ma::maze, p)
   n = 0
   temp_p = p
 
-  while !t && n < 1000
+  if !(can_l(ma, p) || can_r(ma, p) || can_u(ma, p) || can_d(ma, p))
+    # 此点无法
+    return p
+  end
+
+  while !t  && n < 1000
     n += 1
     k = rand([1, 2, 3, 4])
     if k == 1 && can_l(ma, p)#can_l
@@ -116,6 +121,11 @@ function finderr_makePathSuccess(ma::maze, pa, pb)
   end
 end
 
+function is_near(pa, pb)
+  d = sum(abs(pa - pb))
+  return (d == 1)
+end
+
 # 尝试构建一次主干，成功则返回true,否则返回false
 function makePathSuccess(ma::maze)
   pa = ma.st
@@ -123,14 +133,14 @@ function makePathSuccess(ma::maze)
   ma.arr[pa...] = 1
   ma.arr[pb...] = 2
   n = 1
-  pa_old = pa
+  #pa_old = pa
 
-  while allCanMove(ma, pa, pb) && n < 1000
+  while allCanMove(ma, pa, pb) && n < 10000
     n += 1
     pa = nextp(ma, pa)
-    if (pa_old == pa)
-      throw("pa was not changed.")
-    end
+    #if (pa_old == pa)
+    #  throw("pa was not changed.")
+    #end
     pb = nextp(ma, pb) # 各自颜色为1,2
 
     # 染色
@@ -139,14 +149,15 @@ function makePathSuccess(ma::maze)
 
     finderr_makePathSuccess(ma, pa, pb)
 
-    if pa == pb
+    #if pa == pb
+    if is_near(pa, pb)
       return true
     end
   end
 
-  if n >= 1000
-    throw("The path is too long")
-  end
+  #if n >= 10000
+  #  throw("The path is too long")
+  #end
 
   return false
 end
@@ -162,13 +173,23 @@ function makePath(ma::maze, maxstep::Int)
   return -1
 end
 
-function makeMaze(m, n, st, ed)
+function reColorMaze(ma::maze)
+  for i = 1:ma.m, j = 1:ma.n
+    if ma.arr[i, j] != 0
+      ma.arr[i, j] = 1
+    end
+  end
+end
+
+function makeMaze(m, n, st, ed, max_step::Int)
   temp = maze(fill(Int8(0), m, n), m, n, st, ed) # 构建初始迷宫
 
   #随机行走
-  if makePath(temp, 100) == -1
-    throw("Cannot find a path in 100 trys.")
+  if makePath(temp, max_step) == -1
+    throw("Cannot find any path in all trys.")
   end
+
+  reColorMaze(temp)
 
   return temp
 end

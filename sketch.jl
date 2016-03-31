@@ -1,8 +1,8 @@
 include("makeMaze.jl")
 
-g = makeMaze(5, 5, [1, 1], [5, 5])
+g = makeMaze(50, 50, [1, 1], [50, 50], 10000)
 
-g
+writecsv("E:\\GitHub\\makeMaze\\maze_out.csv", g.arr)
 
 g.arr
 
