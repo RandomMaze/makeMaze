@@ -274,9 +274,9 @@ function getPath(ma::maze)
     temp_path[i, 2] = ma.path_a[i][2]
   end
 
-  for j = ma.pb:1
-    temp_path[ma.pa + ma.pb - j + 1, 1] = ma.path_b[j][1]
-    temp_path[ma.pa + ma.pb - j + 1, 2] = ma.path_b[j][2]
+  for j = 1:ma.pb
+    temp_path[ma.pa + j, 1] = ma.path_b[ma.pb - j + 1][1]
+    temp_path[ma.pa + j, 2] = ma.path_b[ma.pb - j + 1][2]
   end
   return temp_path
 end
