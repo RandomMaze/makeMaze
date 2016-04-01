@@ -1,11 +1,10 @@
 include("makeMaze.jl")
 
-g = makeMaze(1000, 1000, [1, 1], [1000, 1000], 1000)
+g = makeMaze(500, 500, [1, 1], [500, 500], 100)
 
 writecsv("E:\\GitHub\\makeMaze\\maze_out.csv", g.arr)
-writecsv("E:\\GitHub\\makeMaze\\maze_patha_out.csv", g.path_a)
-g.arr
+writecsv("E:\\GitHub\\makeMaze\\maze_patha_out.csv", getPath(g))
 
-is_near([1,3],[3,3])
+g.path_a
 
 quit()
