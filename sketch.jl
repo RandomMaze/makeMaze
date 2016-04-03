@@ -1,8 +1,8 @@
 include("makeMaze.jl")
 
-@time g = makeMaze(100, 100, [1, 1], [100, 100], 1000)
+@time g = makeMaze(200, 200, [1, 1], [200, 200], 1000)
 
-writecsv("E:\\GitHub\\makeMaze\\maze_out.csv", g.arr)
+writecsv("E:\\GitHub\\makeMaze\\maze_out.csv", getMap(g))
 writecsv("E:\\GitHub\\makeMaze\\maze_patha_out.csv", getPath(g))
 
 p = getPath(g);

@@ -1,24 +1,18 @@
 include("Types.jl")
 
-# TODO:
-#     1. 修改为碰到对方走过的路径即可结束；
-#     2. 二维数组中存储的是{t, index}，t为颜色，index是对方栈的坐标；
-#     3. 为简化代码，path_a与path_b改为一个二维数组，以存储路径，方便用颜色访问之；
-#     4. 同时将pa,pb合并到一个数组之中，理由同上；
-
 ##=============判断是否可以行走=======================
 
 # 判断是否可以向左走
 function can_l(ma::maze, p)
-  colo = ma.arr[p...]
+  #colo = ma.arr[p...].color
 
   # 判断撞墙
   if p[1] - 1 < 1
     return false
   end
 
-  # 判断撞到自己
-  if ma.arr[(p + [-1, 0])...] == colo
+  # 判断撞到路径
+  if ma.arr[(p + [-1, 0])...].color != 0
     return false
   end
 
@@ -26,15 +20,15 @@ function can_l(ma::maze, p)
 end
 
 function can_r(ma::maze, p)
-  colo = ma.arr[p...]
+  #colo = ma.arr[p...].color
 
   # 判断撞墙
   if p[1] + 1 > ma.m
     return false
   end
 
-  # 判断撞到自己
-  if ma.arr[(p + [1, 0])...] == colo
+  # 判断撞到路径
+  if ma.arr[(p + [1, 0])...].color != 0
     return false
   end
 
@@ -42,15 +36,15 @@ function can_r(ma::maze, p)
 end
 
 function can_u(ma::maze, p)
-  colo = ma.arr[p...]
+  #colo = ma.arr[p...].color
 
   # 判断撞墙
   if p[2] - 1 < 1
     return false
   end
 
-  # 判断撞到自己
-  if ma.arr[(p + [0, -1])...] == colo
+  # 判断撞到路径
+  if ma.arr[(p + [0, -1])...].color != 0
     return false
   end
 
@@ -58,7 +52,7 @@ function can_u(ma::maze, p)
 end
 
 function can_d(ma::maze, p)
-  colo = ma.arr[p...]
+  #colo = ma.arr[p...]
 
   # 判断撞墙
   if p[2] + 1 > ma.n
@@ -66,7 +60,7 @@ function can_d(ma::maze, p)
   end
 
   # 判断撞到自己
-  if ma.arr[(p + [0, 1])...] == colo
+  if ma.arr[(p + [0, 1])...].color != 0
     return false
   end
 
@@ -136,70 +130,96 @@ function is_near(pa, pb)
   return (d <= 1)
 end
 
+#回退
 function walk_back(ma::maze, p, index)
   colo = index
   d = 20
   edx = 0
 
-  if colo == 1
-    if ma.pa > d
-      edx = ma.pa - d
-      if edx == 0
-        throw("index = 0.")
-      end
-    else
-      edx = 1
-    end
-
-    for i = edx + 1:ma.pa
-      ma.arr[ma.path_a[i]...] = 0
-    end
-    ma.pa = edx
+  if ma.p[index] > d
+    edx = ma.p[index] - d
     if edx == 0
       throw("index = 0.")
     end
-    return ma.path_a[edx]
   else
-    if ma.pb > d
-      edx = ma.pb - d
-      if edx == 0
-        throw("index = 0.")
-      end
-    else
-      edx = 1
-    end
-
-    for i = edx + 1:ma.pb
-      ma.arr[ma.path_b[i]...] = 0
-    end
-    ma.pb = edx
-    return ma.path_b[edx]
+    edx = 1
   end
+
+  for i = edx + 1:ma.p[index]
+    ma.arr[ma.path[index, i]...].color = 0
+    ma.arr[ma.path[index, i]...].index = 0
+  end
+  ma.p[index] = edx
+  if edx == 0
+    throw("index = 0.")
+  end
+
+  return ma.path[index, edx]
 end
 
 #存入堆栈
-function putin(ma::maze, index, p)
-  if index == 1
-    ma.pa += 1
-    ma.path_a[ma.pa] = p
-  else
-    ma.pb += 1
-    ma.path_b[ma.pb] = p
-  end
+function putin(ma::maze, t, point)
+  ma.p[t] += 1
+  ma.path[t, ma.p[t]] = point
+  ma.arr[point...] = mycell(t, ma.p[t]) # 堆栈编号
 end
 
+# 判断周围是否有其他颜色的点
+function get_near_one(ma, p)
+  colo = ma.arr[p...].color
+  co2 = 0
+  around_move = reshape([1,0, -1,0, 0,1, 0,-1], 4, 2) # 四个方向
+
+  for i = 1:4
+    co2 = try
+      ma.arr[p[1] + around_move[i,1], p[2] + around_move[i,2]].color
+    catch
+      -1
+    end
+    if co2 != colo && co2 != 0 && co2 != -1
+      return ma.arr[p[1] + around_move[i,1], p[2] + around_move[i,2]].index
+    end
+  end
+
+  # 未找到
+  return -1
+end
+
+# 判断是否相碰，并以此修改堆栈
+function get_near(ma, point_1, point_2)
+  indexp = 0
+  if (indexp = get_near_one(ma, point_1)) != -1
+    # 清除其余路径
+    for i = indexp + 1:ma.p[2]
+      ma.arr[ma.path[2, i]...].color = 0
+    end
+    ma.p[2] = indexp  # 截断对面的路径
+    return true
+  elseif (indexp = get_near_one(ma, point_2)) != -1
+    # 清除其余路径
+    for i = indexp + 1:ma.p[1]
+      ma.arr[ma.path[1, i]...].color = 0
+    end
+    ma.p[1] = indexp  # 截断路径
+    return true
+  end
+  return false
+end
 
 # 尝试构建一次主干，成功则返回true,否则返回false
 function makePathSuccess(ma::maze)
   pa = ma.st
   pb = ma.ed
-  ma.arr[pa...] = 1
-  ma.arr[pb...] = 1#2
+  ma.p = [1, 1]
+  ma.path[1,1] = pa
+  ma.path[2,1] = pb
+  ma.arr[pa...] = mycell(1, 1)
+  ma.arr[pb...] = mycell(2, 1)
   n = 1
   #pa_old = pa
 
   #while allCanMove(ma, pa, pb) && n < 10000
-  while (!is_near(pa, pb)) && n < 1000
+  while (!get_near(ma, pa, pb)) && n < 100
     if can_move(ma, pa)
       pa = nextp(ma, pa)
       putin(ma, 1, pa) # 放入栈中
@@ -218,8 +238,10 @@ function makePathSuccess(ma::maze)
     end
 
     # 染色
-    ma.arr[pa...] = 1
-    ma.arr[pb...] = 1#2
+    #ma.arr[pa...].color = 1
+    #ma.arr[pb...].color = 2
+    #ma.arr[pa...].index = ma.p[1]
+    #ma.arr[pb...].index = ma.p[2]
 
     # 防止越界
     finderr_makePathSuccess(ma, pa, pb)
@@ -229,7 +251,7 @@ function makePathSuccess(ma::maze)
   #if n >= 10000
   #  throw("The path is too long")
   #end
-  if is_near(pa, pb)
+  if get_near(ma, pa, pb)
     return true
   else
     #throw("Not near")
@@ -242,9 +264,9 @@ function makePath(ma::maze, maxstep::Int)
     if makePathSuccess(ma)
       return 0
     else
-      fill!(ma.arr, Int8(0)) # 清除数据
-      ma.pa = 1
-      ma.pb = 1
+      fill!(ma.arr, mycell(0, 0)) # 清除数据
+      ma.p[1] = 1
+      ma.p[2] = 1
     end
   end
   return -1
@@ -259,9 +281,19 @@ function reColorMaze(ma::maze)
 end
 
 function makeMaze(m, n, st, ed, max_step::Int)
-  temp = maze(fill(Int8(0), m, n), m, n, st, ed, fill([0, 0], m * n), fill([0, 0], m * n), 1, 1) # 构建初始迷宫
-  temp.path_a[1] = st
-  temp.path_b[1] = ed
+  temp = maze(fill(mycell(0, 0), m, n), m, n, st, ed, fill([0, 0], 2, m * n), [1, 1]) # 构建初始迷宫
+
+  for i = 1:m, j = 1:n
+    temp.arr[i, j].color = 0
+    temp.arr[i, j].index = 0
+  end
+
+  temp.path[1, 1] = st
+  temp.path[2, 1] = ed
+  temp.arr[st...] = mycell(1,1)
+  temp.arr[ed...] = mycell(2,1)
+
+  #return temp
 
   #随机行走
   if makePath(temp, max_step) == -1
@@ -275,15 +307,26 @@ end
 
 #输出路径
 function getPath(ma::maze)
-  temp_path = Array(Int, ma.pa + ma.pb, 2)
-  for i = 1:ma.pa
-    temp_path[i, 1] = ma.path_a[i][1]
-    temp_path[i, 2] = ma.path_a[i][2]
+  temp_path = Array(Int, sum(ma.p), 2)
+  for i = 1:ma.p[1]
+    temp_path[i, 1] = ma.path[1,i][1]
+    temp_path[i, 2] = ma.path[1,i][2]
   end
 
-  for j = 1:ma.pb
-    temp_path[ma.pa + j, 1] = ma.path_b[ma.pb - j + 1][1]
-    temp_path[ma.pa + j, 2] = ma.path_b[ma.pb - j + 1][2]
+  for j = 1:ma.p[2]
+    temp_path[ma.p[1] + j, 1] = ma.path[2,ma.p[2] - j + 1][1]
+    temp_path[ma.p[1] + j, 2] = ma.path[2,ma.p[2] - j + 1][2]
   end
   return temp_path
+end
+
+function getMap(ma::maze)
+  m = ma.m
+  n = ma.n
+
+  temp_map = fill(0, m, n)
+  for i = 1:m, j = 1:n
+    temp_map[i, j] = ma.arr[i, j].color
+  end
+  return temp_map
 end
