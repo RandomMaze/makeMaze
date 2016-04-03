@@ -1,5 +1,11 @@
 include("Types.jl")
 
+# TODO:
+#     1. 修改为碰到对方走过的路径即可结束；
+#     2. 二维数组中存储的是{t, index}，t为颜色，index是对方栈的坐标；
+#     3. 为简化代码，path_a与path_b改为一个二维数组，以存储路径，方便用颜色访问之；
+#     4. 同时将pa,pb合并到一个数组之中，理由同上；
+
 ##=============判断是否可以行走=======================
 
 # 判断是否可以向左走
@@ -130,13 +136,13 @@ function is_near(pa, pb)
   return (d <= 1)
 end
 
-function walk_back(ma::maze, p)
-  colo = ma.arr[p...]
-  d = 10
+function walk_back(ma::maze, p, index)
+  colo = index
+  d = 20
   edx = 0
 
   if colo == 1
-    if ma.pa > d + 1
+    if ma.pa > d
       edx = ma.pa - d
       if edx == 0
         throw("index = 0.")
@@ -145,16 +151,16 @@ function walk_back(ma::maze, p)
       edx = 1
     end
 
-    for i = ma.pa:edx
+    for i = edx + 1:ma.pa
       ma.arr[ma.path_a[i]...] = 0
     end
     ma.pa = edx
     if edx == 0
       throw("index = 0.")
     end
-    return ma.path_a[ma.pa]
+    return ma.path_a[edx]
   else
-    if ma.pb > d + 1
+    if ma.pb > d
       edx = ma.pb - d
       if edx == 0
         throw("index = 0.")
@@ -163,11 +169,11 @@ function walk_back(ma::maze, p)
       edx = 1
     end
 
-    for i = ma.pb:edx
+    for i = edx + 1:ma.pb
       ma.arr[ma.path_b[i]...] = 0
     end
     ma.pb = edx
-    return ma.path_b[ma.pb]
+    return ma.path_b[edx]
   end
 end
 
@@ -188,18 +194,18 @@ function makePathSuccess(ma::maze)
   pa = ma.st
   pb = ma.ed
   ma.arr[pa...] = 1
-  ma.arr[pb...] = 2
+  ma.arr[pb...] = 1#2
   n = 1
   #pa_old = pa
 
   #while allCanMove(ma, pa, pb) && n < 10000
-  while (!is_near(pa, pb))# && n < 1000
+  while (!is_near(pa, pb)) && n < 1000
     if can_move(ma, pa)
       pa = nextp(ma, pa)
       putin(ma, 1, pa) # 放入栈中
     else
       # 否则向回走
-      pa = walk_back(ma, pa)
+      pa = walk_back(ma, pa, 1)
       n += 1
     end
 
@@ -207,13 +213,13 @@ function makePathSuccess(ma::maze)
       pb = nextp(ma, pb) # 各自颜色为1,2
       putin(ma, 2, pb)
     else
-      pb = walk_back(ma, pb)
+      pb = walk_back(ma, pb, 2)
       n += 1
     end
 
     # 染色
     ma.arr[pa...] = 1
-    ma.arr[pb...] = 2
+    ma.arr[pb...] = 1#2
 
     # 防止越界
     finderr_makePathSuccess(ma, pa, pb)
@@ -226,6 +232,7 @@ function makePathSuccess(ma::maze)
   if is_near(pa, pb)
     return true
   else
+    #throw("Not near")
     return false
   end
 end
@@ -261,7 +268,7 @@ function makeMaze(m, n, st, ed, max_step::Int)
     throw("Cannot find any path in all trys.")
   end
 
-  reColorMaze(temp)
+  #reColorMaze(temp)
 
   return temp
 end
